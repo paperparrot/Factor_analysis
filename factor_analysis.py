@@ -32,7 +32,7 @@ def varimax_rotation(matrix, eps=1e-6, itermax=1000):
 
     nrow, ncol = matrix.shape
     rotated_matrix = np.eye(ncol)
-    var = 0
+    temp_var = 0
 
     for i in range(itermax):
         lam_rot = np.dot(matrix, rotated_matrix)
@@ -40,9 +40,9 @@ def varimax_rotation(matrix, eps=1e-6, itermax=1000):
         u, s, v = np.linalg.svd(np.dot(matrix.T, lam_rot ** 3 - np.dot(lam_rot, tmp)))
         rotated_matrix = np.dot(u, v)
         var_new = np.sum(s)
-        if var_new < var * (1 + eps):
+        if var_new < temp_var * (1 + eps):
             break
-        var = var_new
+        temp_var = var_new
 
     return rotated_matrix
 
@@ -54,12 +54,12 @@ def pca(dataframe, var_x, var_y, stop=-1, rotation='varimax'):
     :param dataframe: Entire datafile. Session ID should be the index
     :param var_x: First variable of the range to be included in the analysis
     :param var_y: Last variable of the range to be included in the analysis
-    :param stop: Criteria to stop. Integer number indicating the number of factors to be included. 
+    :param stop: Criteria to stop. Integer number indicating the number of factors to be included.
     :param rotation:
     :return:
     """
     # Load the inital data frame
-    initial_df = dataframe[var_x: var_y].copy()
+    initial_df = dataframe.ix[:, var_x: var_y].copy()
 
     # Computing the correlation matrix, finding the eigenvalues and eigenvectors, then sorting them
     corr_matrix = np.corrcoef(initial_df, rowvar=0)
