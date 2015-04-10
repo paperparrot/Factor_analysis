@@ -1,5 +1,6 @@
 __author__ = 'sebastien.genty'
-__version__ = '0.5'
+__version__ = '0.6'
+__status__ = 'development'
 
 import numpy as np
 import pandas as pd
@@ -31,7 +32,7 @@ def varimax_rotation(matrix, eps=1e-6, itermax=1000):
     #         gamma = 0.0
 
     nrow, ncol = matrix.shape
-    rotated_matrix = np.eye(ncol)
+    rotated_matrix = np.eye(ncol) # Change this so rotated.shape=matrix.shape
     temp_var = 0
 
     for i in range(itermax):
@@ -59,35 +60,49 @@ def pca(dataframe, var_x, var_y, stop=-1, rotation='varimax'):
     :return:
     """
     # Load the inital data frame
-    initial_df = dataframe.ix[:, var_x: var_y].copy()
+    initial_df = dataframe.ix[:,var_x: var_y].copy()
 
     # Computing the correlation matrix, finding the eigenvalues and eigenvectors, then sorting them
     corr_matrix = np.corrcoef(initial_df, rowvar=0)
     eigenvals, eigenvects = np.linalg.eig(corr_matrix)
-    eigen_df = pd.DataFrame({'eigen_value': eigenvals,
-                             'eigen_vector': eigenvects})
 
-    eigen_df = eigen_df.sort(['eigen_value'])
+    return_list = list()
+    for val, vec in zip(eigenvals, eigenvects):
+        local_dict = dict()
+        local_dict['eigen_val'] = val
+        local_dict['eigen_vec'] = vec
+        return_list.append(local_dict)   
+    
+    eigen_df = pd.DataFrame(return_list)
+    
+    eigen_df = eigen_df.sort(['eigen_val'])
 
     # Determines the number of components to include
     if stop > 0:
         eigen_df = eigen_df[:stop]
 
     else:
-        eigen_df = eigen_df[eigen_df['eigen_value'] >= 1]
+        eigen_df = eigen_df[eigen_df['eigen_val'] >= 1]
 
     # Taking the eigenvalues, putting them in a matrix along the diagonal and taking the square root
-    eigenval_matrix = np.diag(eigen_df['eigen_value'])
+    eigenval_matrix = np.diag(eigen_df['eigen_val'])
     eigenval_matrix = np.sqrt(eigenval_matrix)
 
     # Calculating the loadings by multiplying the eigenvectors to the new eigenvalue matrix
-    loadings_matrix = np.dot(eigen_df['eigen_value'], eigenval_matrix)
-
+    loadings_matrix = np.dot(eigen_df['eigen_vec'], eigenval_matrix)
+    
+    # Putting the loadings into a DataFrame, and formating as necessary.
+    loadings_df = pd.DataFrame()
+    for i in np.arange(len(loadings_matrix)):
+        temp_name = 'Factor ' + str(i)
+        loadings_df[temp_name] = pd.Series(loadings_matrix[i])        
+    
     # Performing the Varimax rotatiom
     if rotation == 'varimax':
-        loadings = pd.DataFrame(varimax_rotation(loadings_matrix), index=initial_df.columns)
+        rotated = varimax_rotation(loadings_df)
+        print rotated
+        loadings = pd.DataFrame(rotated, index=initial_df.columns)
     else:
-        loadings = pd.DataFrame(loadings_matrix, index=initial_df.columns)
+        loadings = loadings_df.set_index(initial_df.columns)
 
-    print loadings
     return loadings
