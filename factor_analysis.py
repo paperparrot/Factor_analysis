@@ -1,6 +1,5 @@
 __author__ = 'sebastien.genty'
-__version__ = '0.6'
-__status__ = 'development'
+__version__ = '0.65'
 
 import numpy as np
 import pandas as pd
@@ -32,7 +31,7 @@ def varimax_rotation(matrix, eps=1e-6, itermax=1000):
     #         gamma = 0.0
 
     nrow, ncol = matrix.shape
-    rotated_matrix = np.eye(ncol) # Change this so rotated.shape=matrix.shape
+    rotated_matrix = np.eye(ncol)
     temp_var = 0
 
     for i in range(itermax):
@@ -44,8 +43,10 @@ def varimax_rotation(matrix, eps=1e-6, itermax=1000):
         if var_new < temp_var * (1 + eps):
             break
         temp_var = var_new
-
-    return rotated_matrix
+        
+    output_matrix = np.dot(matrix, rotated_matrix)
+    
+    return output_matrix
 
 
 def pca(dataframe, var_x, var_y, stop=-1, rotation='varimax'):
