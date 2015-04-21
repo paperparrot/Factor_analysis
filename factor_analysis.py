@@ -1,5 +1,5 @@
 __author__ = 'sebastien.genty'
-__version__ = '0.6'
+__version__ = '0.7'
 __status__ = 'development'
 
 import numpy as np
@@ -32,7 +32,7 @@ def varimax_rotation(matrix, eps=1e-6, itermax=1000):
     #         gamma = 0.0
 
     nrow, ncol = matrix.shape
-    rotated_matrix = np.eye(ncol) # Change this so rotated.shape=matrix.shape
+    rotated_matrix = np.eye(ncol) 
     temp_var = 0
 
     for i in range(itermax):
@@ -80,7 +80,7 @@ def pca(dataframe, var_x, var_y, stop=-1, rotation='varimax'):
     eigen_df = pd.DataFrame(return_list)
     
     eigen_df = eigen_df.sort(['eigen_val'], ascending=False)
-    print eigen_df
+
     # Determines the number of components to include
     if stop > 0:
         eigen_df = eigen_df[:stop]
