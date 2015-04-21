@@ -1,5 +1,6 @@
 __author__ = 'sebastien.genty'
-__version__ = '0.65'
+__version__ = '0.6'
+__status__ = 'development'
 
 import numpy as np
 import pandas as pd
@@ -31,7 +32,7 @@ def varimax_rotation(matrix, eps=1e-6, itermax=1000):
     #         gamma = 0.0
 
     nrow, ncol = matrix.shape
-    rotated_matrix = np.eye(ncol)
+    rotated_matrix = np.eye(ncol) # Change this so rotated.shape=matrix.shape
     temp_var = 0
 
     for i in range(itermax):
@@ -43,9 +44,7 @@ def varimax_rotation(matrix, eps=1e-6, itermax=1000):
         if var_new < temp_var * (1 + eps):
             break
         temp_var = var_new
-        
-    output_matrix = np.dot(matrix, rotated_matrix)
-    
+        output_matrix = np.dot(matrix, rotated_matrix)
     return output_matrix
 
 
@@ -68,6 +67,10 @@ def pca(dataframe, var_x, var_y, stop=-1, rotation='varimax'):
     eigenvals, eigenvects = np.linalg.eig(corr_matrix)
 
     return_list = list()
+    
+    # Transposing the eigenvectors so they match
+    eigenvects = np.transpose(eigenvects)
+    
     for val, vec in zip(eigenvals, eigenvects):
         local_dict = dict()
         local_dict['eigen_val'] = val
@@ -76,8 +79,8 @@ def pca(dataframe, var_x, var_y, stop=-1, rotation='varimax'):
     
     eigen_df = pd.DataFrame(return_list)
     
-    eigen_df = eigen_df.sort(['eigen_val'])
-
+    eigen_df = eigen_df.sort(['eigen_val'], ascending=False)
+    print eigen_df
     # Determines the number of components to include
     if stop > 0:
         eigen_df = eigen_df[:stop]
