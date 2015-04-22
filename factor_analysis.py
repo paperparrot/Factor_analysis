@@ -60,7 +60,7 @@ def pca(dataframe, var_x, var_y, stop=-1, rotation='varimax'):
     :return:
     """
     # Load the inital data frame
-    initial_df = dataframe.ix[:,var_x: var_y].copy()
+    initial_df = dataframe.loc[:,var_x: var_y].copy()
 
     # Computing the correlation matrix, finding the eigenvalues and eigenvectors, then sorting them
     corr_matrix = np.corrcoef(initial_df, rowvar=0)
