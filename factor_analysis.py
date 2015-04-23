@@ -7,10 +7,17 @@ import pandas as pd
 
 """
 This program does factor analysis as previously done in SPSS. Dimension reduction done by PCA, followed by a Varimax
-rotation to make the loadings more readable.
+rotation & Kaizer normalization to make the loadings more readable.
 
 Docstring to be completed.
 """
+
+def communalities(matrix):
+    """
+    This function takes a matrix (expected to the the loadings matrix from the PCA function) and computes the communalities.
+    :param matrix: numpy matrix or pandas DataFrame
+    :return: Pandas series of the communalities
+    """
 
 
 def varimax_rotation(matrix, eps=1e-6, itermax=1000):
@@ -35,6 +42,8 @@ def varimax_rotation(matrix, eps=1e-6, itermax=1000):
     rotated_matrix = np.eye(ncol) 
     temp_var = 0
 
+    # Need to insert part where initial matrix is multiplied by the square of the communalities
+
     for i in range(itermax):
         lam_rot = np.dot(matrix, rotated_matrix)
         tmp = np.diag(np.sum(lam_rot ** 2, axis=0)) / nrow * gamma
@@ -45,6 +54,9 @@ def varimax_rotation(matrix, eps=1e-6, itermax=1000):
             break
         temp_var = var_new
         output_matrix = np.dot(matrix, rotated_matrix)
+
+    # Need to insert part where output matrix is multiplied by the square of the communalities
+
     return output_matrix
 
 
@@ -68,7 +80,7 @@ def pca(dataframe, var_x, var_y, stop=-1, rotation='varimax'):
 
     return_list = list()
     
-    # Transposing the eigenvectors so they match
+    # Transposing the eigenvectors, then creating a DataFrame that contains the Eigenvalues and vectors to sort.
     eigenvects = np.transpose(eigenvects)
     
     for val, vec in zip(eigenvals, eigenvects):
