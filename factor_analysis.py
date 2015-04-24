@@ -12,12 +12,22 @@ rotation & Kaizer normalization to make the loadings more readable.
 Docstring to be completed.
 """
 
+
 def communalities(matrix):
     """
-    This function takes a matrix (expected to the the loadings matrix from the PCA function) and computes the communalities.
+    This function takes a matrix (expected to the the loadings matrix from the PCA function) and computes the
+    communalities.
     :param matrix: numpy matrix or pandas DataFrame
     :return: Pandas series of the communalities
     """
+
+    df = pd.DataFrame(matrix.square())
+    output = pd.Series()
+
+    for i in df.index():
+        output[i] = df.ix[i, :].sum()
+
+    return output
 
 
 def varimax_rotation(matrix, eps=1e-6, itermax=1000):
@@ -30,7 +40,7 @@ def varimax_rotation(matrix, eps=1e-6, itermax=1000):
     """
 
     # Defining the gamma for the rotation. This is the section that can be changed (in comments). Gamma would need to be
-    # included
+    # included as one of the arguments.
     gamma = 1.0
     # if gamma == None:
     #     if (method == 'varimax'):
@@ -43,6 +53,8 @@ def varimax_rotation(matrix, eps=1e-6, itermax=1000):
     temp_var = 0
 
     # Need to insert part where initial matrix is multiplied by the square of the communalities
+    commun = np.diag(communalities(matrix))
+    matrix = np.dot(matrix, commun)
 
     for i in range(itermax):
         lam_rot = np.dot(matrix, rotated_matrix)
@@ -55,7 +67,9 @@ def varimax_rotation(matrix, eps=1e-6, itermax=1000):
         temp_var = var_new
         output_matrix = np.dot(matrix, rotated_matrix)
 
-    # Need to insert part where output matrix is multiplied by the square of the communalities
+    # Need to insert part where output matrix is multiplied by the square of the communalities. Also check I am not
+    # missing a step here.
+    output_matrix = np.dot(output_matrix, commun)
 
     return output_matrix
 
@@ -72,7 +86,7 @@ def pca(dataframe, var_x, var_y, stop=-1, rotation='varimax'):
     :return:
     """
     # Load the inital data frame
-    initial_df = dataframe.loc[:,var_x: var_y].copy()
+    initial_df = dataframe.loc[:, var_x: var_y].copy()
 
     # Computing the correlation matrix, finding the eigenvalues and eigenvectors, then sorting them
     corr_matrix = np.corrcoef(initial_df, rowvar=0)
