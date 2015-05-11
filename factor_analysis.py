@@ -1,5 +1,5 @@
 __author__ = 'sebastien.genty'
-__version__ = '0.7'
+__version__ = '0.8'
 __status__ = 'development'
 
 import numpy as np
@@ -21,13 +21,15 @@ def communalities(matrix):
     :return: Pandas series of the communalities
     """
 
-    df = pd.DataFrame(matrix.square())
-    output = pd.Series()
+    df = pd.DataFrame(matrix**2)
+    output = dict()
 
-    for i in df.index():
-        output[i] = df.ix[i, :].sum()
+    for i in df.index:
+        local_sum = df.loc[i, :].sum()
+        output[i] = local_sum
 
-    return output
+    output_series = pd.Series(output)
+    return output_series
 
 
 def varimax_rotation(matrix, eps=1e-6, itermax=1000):
@@ -45,7 +47,7 @@ def varimax_rotation(matrix, eps=1e-6, itermax=1000):
     # if gamma == None:
     #     if (method == 'varimax'):
     #         gamma = 1.0
-    #     if (method == 'quartimax':
+    #     if (method == 'quartimax'):
     #         gamma = 0.0
 
     nrow, ncol = matrix.shape
@@ -53,9 +55,9 @@ def varimax_rotation(matrix, eps=1e-6, itermax=1000):
     temp_var = 0
 
     # Need to insert part where initial matrix is multiplied by the square of the communalities
-    commun = np.diag(communalities(matrix))
-    matrix = np.dot(matrix, commun)
-
+    commun = np.diag(np.sqrt(communalities(matrix)))
+    matrix = np.dot(commun, matrix)
+    
     for i in range(itermax):
         lam_rot = np.dot(matrix, rotated_matrix)
         tmp = np.diag(np.sum(lam_rot ** 2, axis=0)) / nrow * gamma
@@ -63,13 +65,12 @@ def varimax_rotation(matrix, eps=1e-6, itermax=1000):
         rotated_matrix = np.dot(u, v)
         var_new = np.sum(s)
         if var_new < temp_var * (1 + eps):
+            print i
             break
         temp_var = var_new
         output_matrix = np.dot(matrix, rotated_matrix)
 
-    # Need to insert part where output matrix is multiplied by the square of the communalities. Also check I am not
-    # missing a step here.
-    output_matrix = np.dot(output_matrix, commun)
+    output_matrix = np.dot(commun, output_matrix)
 
     return output_matrix
 
@@ -82,8 +83,8 @@ def pca(dataframe, var_x, var_y, stop=-1, rotation='varimax'):
     :param var_x: First variable of the range to be included in the analysis
     :param var_y: Last variable of the range to be included in the analysis
     :param stop: Criteria to stop. Integer number indicating the number of factors to be included.
-    :param rotation:
-    :return:
+    :param rotation: which rotation to perform. If False, none will be done. Default is Varimax
+    :return: Table of factor loadings, whether rotated or unrotated. 
     """
     # Load the inital data frame
     initial_df = dataframe.loc[:, var_x: var_y].copy()
@@ -127,12 +128,11 @@ def pca(dataframe, var_x, var_y, stop=-1, rotation='varimax'):
         temp_name = 'Factor ' + str(i)
         loadings_df[temp_name] = pd.Series(loadings_matrix[i])        
     
-    # Performing the Varimax rotatiom
+    loadings = loadings_df.set_index(initial_df.columns)
+    
+    # Performing the Varimax rotatiom  
     if rotation == 'varimax':
-        rotated = varimax_rotation(loadings_df)
-        print rotated
+        rotated = varimax_rotation(loadings)
         loadings = pd.DataFrame(rotated, index=initial_df.columns)
-    else:
-        loadings = loadings_df.set_index(initial_df.columns)
 
     return loadings
