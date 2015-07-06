@@ -75,37 +75,47 @@ def varimax_rotation(matrix, eps=1e-6, itermax=1000):
     return output_matrix
 
 
-def pca(dataframe, var_x, var_y, stop=-1, rotation='varimax'):
+def pca(dataframe, var_x='', var_y='', stop=-1, rotation='varimax', return_factors=False):
     """
     Principal Component Analysis implementation using the correlation matrix. This could be expanded to use the
     covariance matrix by adding an if statement when the correlation matrix is created.
     :param dataframe: Entire datafile. Session ID should be the index
-    :param var_x: First variable of the range to be included in the analysis
-    :param var_y: Last variable of the range to be included in the analysis
+    :param var_x: First variable of the range to be included in the analysis. Defaults to the first variable
+    :param var_y: Last variable of the range to be included in the analysis. Defaults to the last variable
     :param stop: Criteria to stop. Integer number indicating the number of factors to be included.
     :param rotation: which rotation to perform. If False, none will be done. Default is Varimax
-    :return: Table of factor loadings, whether rotated or unrotated. 
+    :param return_factors: If True, returns factors and prints out loadings
+    :return: Table of factor loadings, whether rotated or unrotated.
     """
-    # Load the inital data frame
-    initial_df = dataframe.loc[:, var_x: var_y].copy()
+    # Load the initial data frame
+    initial_df = dataframe.copy()
+    if var_x != '' and var_y != '':
+        initial_df = initial_df.loc[:, var_x : var_y]
+    elif var_x != '':
+        initial_df = initial_df.loc[:, var_x : ]
+    elif var_y != '':
+        initial_df = initial_df.loc[:, : var_y]
+
 
     # Computing the correlation matrix, finding the eigenvalues and eigenvectors, then sorting them
     corr_matrix = np.corrcoef(initial_df, rowvar=0)
     eigenvals, eigenvects = np.linalg.eig(corr_matrix)
+    print "Eigen Vals"
+    print eigenvals
 
     return_list = list()
-    
+
     # Transposing the eigenvectors, then creating a DataFrame that contains the Eigenvalues and vectors to sort.
     eigenvects = np.transpose(eigenvects)
-    
+
     for val, vec in zip(eigenvals, eigenvects):
         local_dict = dict()
         local_dict['eigen_val'] = val
         local_dict['eigen_vec'] = vec
-        return_list.append(local_dict)   
-    
+        return_list.append(local_dict)
+
     eigen_df = pd.DataFrame(return_list)
-    
+
     eigen_df = eigen_df.sort(['eigen_val'], ascending=False)
 
     # Determines the number of components to include
@@ -121,18 +131,43 @@ def pca(dataframe, var_x, var_y, stop=-1, rotation='varimax'):
 
     # Calculating the loadings by multiplying the eigenvectors to the new eigenvalue matrix
     loadings_matrix = np.dot(eigen_df['eigen_vec'], eigenval_matrix)
-    
+
     # Putting the loadings into a DataFrame, and formating as necessary.
     loadings_df = pd.DataFrame()
     for i in np.arange(len(loadings_matrix)):
         temp_name = 'Factor ' + str(i)
-        loadings_df[temp_name] = pd.Series(loadings_matrix[i])        
-    
+        loadings_df[temp_name] = pd.Series(loadings_matrix[i])
+
     loadings = loadings_df.set_index(initial_df.columns)
-    
-    # Performing the Varimax rotatiom  
+
+    # -1 test
+    for i in range(0, len(loadings.columns)):
+        if loadings.ix[:, i].sum() < 0:
+            loadings.ix[:, i] = loadings.ix[:, i].multiply(-1)
+
+    # Performing the Varimax rotatiom
     if rotation == 'varimax':
         rotated = varimax_rotation(loadings)
         loadings = pd.DataFrame(rotated, index=initial_df.columns)
 
+    # -1 test
+    for i in range(0, len(loadings.columns)):
+        if loadings.ix[:, i].sum() < 0:
+            loadings.ix[:, i] = loadings.ix[:, i].multiply(-1)
+
+    if return_factors:
+        print "Loadings:"
+        print loadings
+
+        factor_sums = pd.DataFrame()
+        index_name_i = 0
+        for r in dataframe.iterrows():
+            factors = {}
+            for c in range(0, len(loadings.columns)):
+                factors['Factor ' + str(c+1)] = loadings.ix[:, c].multiply(r[1]).sum()
+            factors_series = pd.Series(data=factors, name=dataframe.index[index_name_i])
+            factor_sums = factor_sums.append(factors_series)
+            index_name_i += 1
+
+        return factor_sums
     return loadings
