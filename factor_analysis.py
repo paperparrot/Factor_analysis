@@ -1,5 +1,5 @@
 __author__ = 'sebastien.genty'
-__version__ = '0.8'
+__version__ = '0.9'
 __status__ = 'development'
 
 import numpy as np
