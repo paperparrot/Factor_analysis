@@ -4,6 +4,7 @@ __status__ = 'development'
 
 import numpy as np
 import pandas as pd
+from sklearn.cluster import KMeans
 
 """
 This program does factor analysis as previously done in SPSS. Dimension reduction done by PCA, followed by a Varimax
@@ -79,21 +80,37 @@ def pca(dataframe, var_x, var_y, stop=-1, rotation='varimax', return_factors=Fal
     """
     Principal Component Analysis implementation using the correlation matrix. This could be expanded to use the
     covariance matrix by adding an if statement when the correlation matrix is created.
+    Prints out Eigen values and loadings.
+
     :param dataframe: Entire datafile. Session ID should be the index
+    :type dataframe: pandas.Dataframe
     :param var_x: First variable of the range to be included in the analysis.
+    :type var_x: string
     :param var_y: Last variable of the range to be included in the analysis.
+    :type var_y: string
     :param stop: Criteria to stop. Integer number indicating the number of factors to be included.
-    :param rotation: which rotation to perform. If False, none will be done. Default is Varimax
+    :type stop: int
+    :param rotation: which rotation to perform on loadings. Default is 'varimax'.
+    :type rotation: string
     :param return_factors: If True, returns factors and prints out loadings
-    :return: Table of factor loadings, whether rotated or unrotated.
+    :type return_factors: boolean
+    :return: Table of factor loadings.
+    :rtype: pandas.Dataframe
+
+    :Example:
+
+    import plato as pt
+    import pandas as pd
+    df = pd.read_excel('C:/Users/Bob/Desktop/pca data.xlsx', index_col=0)
+    pt.pca(df, 'q6_1', 'q6_37', stop=6, return_factors=True)
     """
     # Load the initial data frame
-    initial_df = dataframe.loc[:, var_x : var_y]
+    initial_df = dataframe.loc[:, var_x:var_y]
 
     # Computing the correlation matrix, finding the eigenvalues and eigenvectors, then sorting them
     corr_matrix = np.corrcoef(initial_df, rowvar=0)
     eigenvals, eigenvects = np.linalg.eig(corr_matrix)
-    print "Eigen Vals"
+    print "Eigen Vals: "
     print eigenvals
 
     return_list = list()
@@ -125,10 +142,10 @@ def pca(dataframe, var_x, var_y, stop=-1, rotation='varimax', return_factors=Fal
     # Calculating the loadings by multiplying the eigenvectors to the new eigenvalue matrix
     loadings_matrix = np.dot(eigen_df['eigen_vec'], eigenval_matrix)
 
-    # Putting the loadings into a DataFrame, and formating as necessary.
+    # Putting the loadings into a DataFrame, and formatting as necessary.
     loadings_df = pd.DataFrame()
     for i in np.arange(len(loadings_matrix)):
-        temp_name = 'Factor ' + str(i)
+        temp_name = 'factor ' + str(i+1)
         loadings_df[temp_name] = pd.Series(loadings_matrix[i])
 
     loadings = loadings_df.set_index(initial_df.columns)
@@ -138,7 +155,31 @@ def pca(dataframe, var_x, var_y, stop=-1, rotation='varimax', return_factors=Fal
         if loadings.ix[:, i].sum() < 0:
             loadings.ix[:, i] = loadings.ix[:, i].multiply(-1)
 
-    # Performing the Varimax rotatiom
+    if return_factors:
+        # normalize original data by variance
+        rec_initial_df = initial_df.copy()
+        for j in initial_df.columns:
+            for i in initial_df.index:
+                rec_initial_df.loc[i, j] = (initial_df.loc[i, j]-initial_df[j].mean())/initial_df[j].std()
+
+        # factoring here
+        factor_sums = pd.DataFrame()
+        index_name_i = 0
+        for r in rec_initial_df.iterrows():
+            factors = {}
+            for c in range(0, len(loadings.columns)):
+                factors['factor ' + str(c+1)] = loadings.ix[:, c].multiply(r[1][var_x:var_y]).sum()
+            factors_series = pd.Series(data=factors, name=rec_initial_df.index[index_name_i])
+            factor_sums = factor_sums.append(factors_series)
+            index_name_i += 1
+        factor_sums.index.name = 'session'
+
+        # rescaling
+        rec_factor_sums = factor_sums.copy()
+        for i in factor_sums.columns:
+            rec_factor_sums[i] = factor_sums[i]/factor_sums[i].std()
+
+    # Performing Varimax rotation
     if rotation == 'varimax':
         rotated = varimax_rotation(loadings)
         loadings = pd.DataFrame(rotated, index=initial_df.columns)
@@ -149,18 +190,8 @@ def pca(dataframe, var_x, var_y, stop=-1, rotation='varimax', return_factors=Fal
             loadings.ix[:, i] = loadings.ix[:, i].multiply(-1)
 
     if return_factors:
-        print "Loadings:"
+        print "\nLoadings:"
         print loadings
+        return rec_factor_sums
 
-        factor_sums = pd.DataFrame()
-        index_name_i = 0
-        for r in dataframe.iterrows():
-            factors = {}
-            for c in range(0, len(loadings.columns)):
-                factors['Factor ' + str(c+1)] = loadings.ix[:, c].multiply(r[1][var_x:var_y]).sum()
-            factors_series = pd.Series(data=factors, name=dataframe.index[index_name_i])
-            factor_sums = factor_sums.append(factors_series)
-            index_name_i += 1
-
-        return factor_sums
     return loadings
